@@ -73,26 +73,26 @@ def getData():
 	h = float(request.args.get('h'))
 	cell_size = float(request.args.get('cell_size'))
 
-	analysis_i = request.args.get('analysis_i')
-	analysis_h = request.args.get('analysis_h')
-
-
+        analysis = request.args.get('analysis')
+	heatmap = request.args.get('heatmap')
+	spread = request.args.get('spread')
+	
 	print "received coordinates: [" + lat1 + ", " + lat2 + "], [" + lng1 + ", " + lng2 + "]"
 	
 	client = pyorient.OrientDB("localhost", 2424)
-	session_id = client.connect("root", "michael2464")
+	session_id = client.connect("root", "123")
 	db_name = "soufun"
 	db_username = "admin"
 	db_password = "admin"
 
 	if client.db_exists( db_name, pyorient.STORAGE_TYPE_MEMORY ):
 		client.db_open( db_name, db_username, db_password )
-		print db_name + " opened successfully"
+		print db_name + "opened successfully"
 	else:
 		print "database [" + db_name + "] does not exist! session ending..."
 		sys.exit()
 
-	query = 'SELECT FROM Listing WHERE latitude BETWEEN {} AND {} AND longitude BETWEEN {} AND {}'
+	query = 'SELECT FROM Listing WhiHERE latitude BETWEEN {} AND {} AND longitude BETWEEN {} AND {}'
 
 	records = client.command(query.format(lat1, lat2, lng1, lng2))
 
@@ -147,7 +147,20 @@ def getData():
                 for i in range(numW):
            	    grid[j].append(0)
             ## MACHINE LEARNING IMPLEMENTATION
-                
+            if heatmap == "true":
+	    ## HEAT MAP IMPLEMENTATION
+		q.put('starting heatmap analysis...')
+		for record in records:
+
+			pos_x = int(remap(record.longitude, lng1, lng2, 0, numW))
+			pos_y = int(remap(record.latitude, lat1, lat2, numH, 0))
+                    
+                        spread = num
+                        
+                        for j in range(max(0, (pos_y-spread)), min(numH, (pos_y+spread))):
+	 		    for i in range(max(0, (pos_x-spread)), min(numW, (pos_x+spread))):
+	 			grid[j][i] += 2 * math.exp((-point_distance(i,j,pos_x,pos_y)**2)/(2*(spread/2)**2))
+                        
             featureData = []
             targetData = []
             
@@ -217,8 +230,8 @@ def getData():
                 
                 
             grid = normalizeArray(grid)
-            offsetLeft = (w - numW * cell_size) / 2.0
-            offsetTop = (h - numH * cell_size) / 2.0
+            offsetLeft = (w - numW * cell_size)/2.0
+            offsetTop = (h - numH * cell_size)/2.0
                 
             for j in range(numH):
                 for i in range(numW):
@@ -235,58 +248,6 @@ def getData():
             # q.put('idle')
                 
             return json.dumps(output)
-
-        elif analysis_h == "true":
-           	q.put('starting analysis_h...')
-                    
-                output["analysis_h"] = []
-                    
-                numW = int(math.floor(w/cell_size))
-                numH = int(math.floor(h/cell_size))
-                    
-                grid = []
-                    
-                for j in range(numH):
-               	    grid.append([])
-               	    for i in range(numW):
-               	        grid[j].append(0)
-               	## HEAT MAP IMPLEMENTATION
-               	
-               	for record in records:
-                    
-                   	pos_x = int(remap(record.longitude, lng1, lng2, 0, numW))
-                   	pos_y = int(remap(record.latitude, lat1, lat2, numH, 0))
-                        
-                   	spread = int(request.args.get('spread'))
-
-                   	for j in range(max(0, (pos_y-spread)), min(numH, (pos_y+spread))):
-                       	    for i in range(max(0, (pos_x-spread)), min(numW, (pos_x+spread))):
-                       	        grid[j][i] += 2 * math.exp((-point_distance(i,j,pos_x,pos_y)**2)/(2*(spread/2)**2))
-                        
-                grid = normalizeArray(grid)
-                    
-                offsetLeft = (w - numW * cell_size) / 2.0
-                offsetTop = (h - numH * cell_size) / 2.0
-                    
-                for j in range(numH):
-               	    for i in range(numW):
-                   	newItem = {}
-                    
-                   	newItem['x'] = offsetLeft + i*cell_size
-                   	newItem['y'] = offsetTop + j*cell_size
-                   	newItem['width'] = cell_size-1
-                   	newItem['height'] = cell_size-1
-                   	newItem['value'] = grid[j][i]
-                    
-                   	output["analysis_h"].append(newItem)
-                    
-                q.put('idle')
-                    
-                return json.dumps(output)
-    
-        else:
-    	   q.put('idle')
-    	   return json.dumps(output)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0',port=5000,debug=True,threaded=True)

@@ -226,9 +226,7 @@ def getData():
 
                     grid[j][i] = model_best.predict(X_test_scaled)
 
-                
-                
-                
+                       
             grid = normalizeArray(grid)
             offsetLeft = (w - numW * cell_size)/2.0
             offsetTop = (h - numH * cell_size)/2.0
